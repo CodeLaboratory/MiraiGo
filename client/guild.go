@@ -175,7 +175,7 @@ func (g *GuildInfo) removeChannel(id uint64) {
 }
 
 func (s *GuildService) GetUserProfile(tinyId uint64) (*GuildUserProfile, error) {
-	flags := make(proto.DynamicMessage, 101)
+	flags := proto.DynamicMessage{}
 	for i := 3; i <= 29; i++ {
 		flags[uint64(i)] = 1
 	}
@@ -275,7 +275,7 @@ func (s *GuildService) FetchGuildMemberListWithRole(guildId, channelId uint64, s
 // FetchGuildMemberProfileInfo 获取单个频道成员资料
 func (s *GuildService) FetchGuildMemberProfileInfo(guildId, tinyId uint64) (*GuildUserProfile, error) {
 	seq := s.c.nextSeq()
-	flags := make(proto.DynamicMessage, 101)
+	flags := proto.DynamicMessage{}
 	for i := 3; i <= 29; i++ {
 		flags[uint64(i)] = 1
 	}
@@ -740,9 +740,9 @@ func (c *QQClient) buildSyncChannelFirstViewPacket() (uint16, []byte) {
 	return c.uniPacket("trpc.group_pro.synclogic.SyncLogic.SyncFirstView", payload)
 }
 
-func decodeGuildPushFirstView(c *QQClient, _ *network.IncomingPacketInfo, payload []byte) (any, error) {
+func decodeGuildPushFirstView(c *QQClient, pkt *network.Packet) (any, error) {
 	firstViewMsg := new(channel.FirstViewMsg)
-	if err := proto.Unmarshal(payload, firstViewMsg); err != nil {
+	if err := proto.Unmarshal(pkt.Payload, firstViewMsg); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal protobuf message")
 	}
 	if len(firstViewMsg.GuildNodes) > 0 {
@@ -778,7 +778,7 @@ func decodeGuildPushFirstView(c *QQClient, _ *network.IncomingPacketInfo, payloa
 			c.GuildService.Guilds = append(c.GuildService.Guilds, info)
 		}
 	}
-	if len(firstViewMsg.ChannelMsgs) > 0 { // sync msg
-	}
+	// if len(firstViewMsg.ChannelMsgs) > 0 { // sync msg
+	// }
 	return nil, nil
 }
