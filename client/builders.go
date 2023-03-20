@@ -19,7 +19,7 @@ import (
 	"github.com/Mrs4s/MiraiGo/client/pb/structmsg"
 	"github.com/Mrs4s/MiraiGo/internal/proto"
 	"github.com/Mrs4s/MiraiGo/internal/tlv"
-	"github.com/Mrs4s/MiraiGo/warpper"
+	"github.com/Mrs4s/MiraiGo/wrapper"
 )
 
 var (
@@ -103,16 +103,15 @@ func (c *QQClient) buildLoginPacket() (uint16, []byte) {
 		tlv.T521(0),
 		tlv.T525(tlv.T536([]byte{0x01, 0x00})),
 	)
-	if warpper.DandelionEnergy != nil {
-		salt := binary.NewWriterF(func(w *binary.Writer) {
-			//  util.int64_to_buf(bArr42, 0, (int) uin2);
-			//  util.int16_to_buf(bArr42, 4, u.guid.length); // 故意的还是不小心的
-			w.Write(binary.NewWriterF(func(w *binary.Writer) { w.WriteUInt64(uint64(c.Uin)) })[:4])
-			w.WriteBytesShort(c.Device().Guid)
-			w.WriteBytesShort([]byte(c.version().SdkVersion))
-			w.WriteUInt32(9) // sub command
-		})
-		t.Append(tlv.T544Custom("810_9", salt, warpper.DandelionEnergy))
+	if wrapper.DandelionEnergy != nil {
+		if t544 := tlv.T544v2(uint64(c.Uin), "810_9", 9, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
+	}
+	if c.Device().QImei16 != "" {
+		t.Append(tlv.T545([]byte(c.Device().QImei16)))
+	} else {
+		t.Append(tlv.T545([]byte(c.Device().IMEI)))
 	}
 	req := c.buildOicqRequestPacket(c.Uin, 0x0810, t)
 	r := network.Request{
@@ -310,6 +309,11 @@ func (c *QQClient) buildCaptchaPacket(result string, sign []byte) (uint16, []byt
 	if c.sig.T547 != nil {
 		t.Append(tlv.T(0x547, c.sig.T547))
 	}
+	if wrapper.DandelionEnergy != nil {
+		if t544 := tlv.T544(uint64(c.Uin), "810_2", 2, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
+	}
 	req := c.buildOicqRequestPacket(c.Uin, 0x0810, t)
 	r := network.Request{
 		Type:        network.RequestTypeLogin,
@@ -360,8 +364,10 @@ func (c *QQClient) buildSMSCodeSubmitPacket(code string) (uint16, []byte) {
 			tlv.T198(),
 		},
 	}
-	if warpper.DandelionEnergy != nil {
-		t.Append(tlv.T544(uint64(c.Uin), "810_7", 7, c.version().SdkVersion, c.Device().Guid, warpper.DandelionEnergy))
+	if wrapper.DandelionEnergy != nil {
+		if t544 := tlv.T544(uint64(c.Uin), "810_7", 7, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
 	}
 	req := c.buildOicqRequestPacket(c.Uin, 0x0810, t)
 	r := network.Request{
@@ -389,8 +395,10 @@ func (c *QQClient) buildTicketSubmitPacket(ticket string) (uint16, []byte) {
 	if c.sig.T547 != nil {
 		t.Append(tlv.T(0x547, c.sig.T547))
 	}
-	if warpper.DandelionEnergy != nil {
-		t.Append(tlv.T544(uint64(c.Uin), "810_2", 2, c.version().SdkVersion, c.Device().Guid, warpper.DandelionEnergy))
+	if wrapper.DandelionEnergy != nil {
+		if t544 := tlv.T544(uint64(c.Uin), "810_2", 2, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
 	}
 	req := c.buildOicqRequestPacket(c.Uin, 0x0810, t)
 	r := network.Request{
@@ -450,8 +458,19 @@ func (c *QQClient) buildRequestTgtgtNopicsigPacket() (uint16, []byte) {
 			tlv.T516(),
 			tlv.T521(0),
 			tlv.T525(tlv.T536([]byte{0x01, 0x00})),
-			tlv.T545([]byte(c.Device().IMEI)),
 		},
+	}
+
+	if wrapper.DandelionEnergy != nil {
+		if t544 := tlv.T544v2(uint64(c.Uin), "810_f", 15, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
+	}
+
+	if c.Device().QImei16 != "" {
+		t.Append(tlv.T545([]byte(c.Device().QImei16)))
+	} else {
+		t.Append(tlv.T545([]byte(c.Device().IMEI)))
 	}
 	m := oicq.Message{
 		Uin:              uint32(c.Uin),
@@ -530,6 +549,11 @@ func (c *QQClient) buildRequestChangeSigPacket(changeD2 bool) (uint16, []byte) {
 		}),
 		tlv.T202(c.Device().WifiBSSID, c.Device().WifiSSID),
 	)
+	if wrapper.DandelionEnergy != nil && t.Command == 10 {
+		if t544 := tlv.T544v2(uint64(c.Uin), "810_a", 10, c.version().SdkVersion, c.Device().Guid, wrapper.DandelionEnergy); t544 != nil {
+			t.Append(t544)
+		}
+	}
 	req := c.buildOicqRequestPacket(c.Uin, 0x0810, t)
 	req2 := network.Request{
 		Type:        network.RequestTypeLogin,
